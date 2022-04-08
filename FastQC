@@ -1,0 +1,33 @@
+import glob
+from pathlib import Path
+import os
+
+samples, = glob_wildcards("raw_fastq/{sample}_R1.fastq.gz")
+parts,reps, = glob_wildcards("raw_fastq/{part}_{rep}_R1.fastq.gz")
+
+parts = list(set(parts))
+reps = list(set(reps))
+samples = list(set(samples))
+print(parts)
+print(samples)
+
+print(reps)
+
+rule fastqc_all:
+	input: expand("results-fastqc/{sample}_R1_fastqc.html", sample=samples),
+	      expand("results-fastqc/{sample}_R2_fastqc.html", sample=samples),
+	output: "status/fastqc-complete"
+	shell: "touch {output}" #Creat output file von output.
+
+rule fastqc:
+	input:
+		"raw_fastq/{sample_full}.fastq.gz"
+	output:
+		html="results-fastqc/{sample_full}_fastqc.html",
+		zip="results-fastqc/{sample_full}_fastqc.zip"
+	params: ""
+	log:
+		"logs/fastqc/{sample_full}.log"
+	threads: 1
+	wrapper:
+		"0.66.0/bio/fastqc"
