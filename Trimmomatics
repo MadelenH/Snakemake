@@ -1,0 +1,52 @@
+
+
+import glob
+from pathlib import Path
+import os
+
+samples, = glob_wildcards("raw_fastq/{sample}_R1.fastq.gz")
+parts,reps, = glob_wildcards("raw_fastq/{part}_{rep}_R1.fastq.gz")
+
+
+parts = list(set(parts))
+reps = list(set(reps))
+samples = list(set(samples))
+print(parts)
+print(samples)
+
+print(reps)
+
+
+rule all:
+	input:
+             "status/trimmomatic-complete",
+
+rule trimmomatic_all:
+	input: expand("trimmed/{sample}_R1.fastq.gz", sample=samples)
+	output: "status/trimmomatic-complete"
+	shell: "touch {output}"
+
+rule trimmomatic_pe:
+        input:
+            r1="raw_fastq/{sample}_R1.fastq.gz",
+            r2="raw_fastq/{sample}_R2.fastq.gz"
+        output:
+            r1="trimmed/{sample}_R1.fastq.gz",
+            r2="trimmed/{sample}_R2.fastq.gz",
+            # reads where trimming entirely removed the mate
+            r1_unpaired="trimmed/{sample}_R1.unpaired.fastq.gz",
+            r2_unpaired="trimmed/{sample}_R2.unpaired.fastq.gz"
+        log:
+            "logs/trimmomatic/{sample}.log"
+        params:
+            # list of trimmers (see manual)
+            trimmer=["ILLUMINACLIP:/net/apps/cbu/stow/Trimmomatic-0.38/adapters/TruSeq3-PE.fa:2:30:10:2:keepBothReads", "LEADING:0", "TRAILING:0", "SLIDINGWINDOW:4:15", "MINLEN:95"],
+            # optional parameters
+            extra="",
+            compression_level="-9"
+        threads:
+            8
+        wrapper:
+            "0.66.0/bio/trimmomatic/pe"
+
+
