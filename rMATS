@@ -1,0 +1,78 @@
+
+
+import glob
+from pathlib import Path
+import os
+
+samples, = glob_wildcards("raw_fastq/{sample}_R1.fastq.gz")
+parts,reps, = glob_wildcards("raw_fastq/{part}_{rep}_R1.fastq.gz")
+
+
+parts = list(set(parts))
+reps = list(set(reps))
+samples = list(set(samples))
+print(parts)
+print(samples)
+
+print(reps)
+
+
+rule all:
+	input:
+             expand("samtools-sort/{group}.txt",group=["PRPF31","SCR"]),
+             "results-rmats/flag",
+ 
+
+
+def absolute_path(group):  
+    list = []
+    #try: 
+    #    open(files, 'w') #Create text file
+    #except OSError: 
+    #    print('Failed creating the file')
+    #else: 
+    #    print('File created')
+    for fname in parts: #Go through the files in samtools-sort
+        print(fname)
+        print(group)
+        if (str(group) == fname[4:]): #check if the file ends with the correct characters 
+            p = os.path.abspath(f"samtools-sort/{fname}.bam") #get absolute path of file 
+            list.append(p) 
+            print(list)
+    file_paths = ','.join(list)
+    write_path = f"samtools-sort/{group}.txt"
+    print(f"write_path = {write_path}")
+    with open(write_path, "w") as file:
+        file.write(file_paths) #write the paths to text file 
+    return file_paths
+
+
+
+rule PRPF31_file:
+    input:
+        expand("samtools-sort/{part}.bam", part=parts)
+    output:
+        "samtools-sort/{group}.txt"
+    log: "logs/PRPF31-create-{group}.txt"
+    run: absolute_path(wildcards.group)
+
+
+
+rule rmats:
+    input:
+        gtf = "/export/grellscheidfs/Madelen/test_mouse/Mouse_genome/Mus_musculus.GRCm38.101.gtf",
+        b1 = expand("samtools-sort/{group}.txt",group=["PRPF31","SCR"]),
+        hups = expand("samtools-index/{part}.bam.bai", part=parts),
+        #b2 = "samtools-sort/{group}.txt",
+    output:
+        od = directory("results-rmats"),
+        tmp = temp(directory("temp-rmats")),#with temp() the directories will deleted afterwards
+        flag = temp(touch("results-rmats/flag"))#Snakemake wants for every input an output file. As we create only directories, we fake snakemake with a fake ouptut-file using variables (group). 
+    params:
+        # optional parameters
+        extra="-t paired --readLength 95",
+    threads: 24
+    log: "logs/rmats_logfile_{group}.txt"
+    shell:
+        "rmats-corrected.py --b1 {input.b1[0]} --b2 {input.b1[1]} --gtf {input.gtf} {params.extra} --nthread {threads} --od {output.od} --tmp {output.tmp} > {log} 2>&1"
+

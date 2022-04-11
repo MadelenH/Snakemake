@@ -1,0 +1,42 @@
+
+
+import glob
+from pathlib import Path
+import os
+
+samples, = glob_wildcards("raw_fastq/{sample}_R1.fastq.gz")
+parts,reps, = glob_wildcards("raw_fastq/{part}_{rep}_R1.fastq.gz")
+
+
+parts = list(set(parts))
+reps = list(set(reps))
+samples = list(set(samples))
+print(parts)
+print(samples)
+
+print(reps)
+
+
+rule all:
+	input:
+             "Genome-index",
+ 
+
+
+rule star_index_all:
+        input: expand("Genome-index/Genome", sample=samples)
+        output: "status/star-index-complete"
+        shell: "touch {output}"
+
+
+rule star_index:
+        input:
+            fasta = "/export/grellscheidfs/Madelen/test_mouse/Mouse_genome/Mus_musculus.GRCm38.dna.toplevel.fa", # provide your reference FASTA file provide your GTF file
+            gtf = "/export/grellscheidfs/Madelen/test_mouse/Mouse_genome/Mus_musculus.GRCm38.101.gtf"
+        output:
+            directory("Genome-index")
+        message:
+            "Testing STAR index"
+        shell:
+            "STAR --runMode genomeGenerate --limitGenomeGenerateRAM 33524373088 --runThreadN 12 --genomeDir Genome-index --genomeFastaFiles {input.fasta} --sjdbOverhang 99 --sjdbGTFfile {input.gtf}"
+

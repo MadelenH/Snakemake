@@ -1,0 +1,60 @@
+
+
+import glob
+from pathlib import Path
+import os
+
+samples, = glob_wildcards("raw_fastq/{sample}_R1.fastq.gz")
+parts,reps, = glob_wildcards("raw_fastq/{part}_{rep}_R1.fastq.gz")
+
+
+parts = list(set(parts))
+reps = list(set(reps))
+samples = list(set(samples))
+print(parts)
+print(samples)
+
+print(reps)
+
+
+rule all:
+	input:
+             expand("samtools-sort/{sample}.bam", sample=samples),
+
+def get_matches(sample): 
+
+        list = []
+
+        for i in samples: 
+                star_file = f"STAR/{samples}/Aligned.sortedByCoord.out.bam"
+                raw_data = f"raw_fastq/{samples}_R1.fastq.gz"
+
+                if Path(raw_data).exists(): 
+                        list.append(star_file)
+        return list
+
+
+rule samtools_sort_all: 
+        input: expand("samtools-sort/{i}.bam", i=samples), 
+
+rule samtools_sort: 
+        input: get_matches
+        output: 
+                "samtools-sort/{i}.bam"
+        params: 
+                extra = "-m 4G", 
+                tmp_dir = "/tmp/"
+        threads: 
+                8
+        wrapper: 
+                "0.22.0/bio/samtools/sort"
+
+
+
+
+
+
+
+
+
+

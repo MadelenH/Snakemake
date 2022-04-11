@@ -1,0 +1,46 @@
+
+
+import glob
+from pathlib import Path
+import os
+
+samples, = glob_wildcards("raw_fastq/{sample}_R1.fastq.gz")
+parts,reps, = glob_wildcards("raw_fastq/{part}_{rep}_R1.fastq.gz")
+
+
+parts = list(set(parts))
+reps = list(set(reps))
+samples = list(set(samples))
+print(parts)
+print(samples)
+
+print(reps)
+
+
+rule all:
+	input:
+             expand("STAR/{sample}/Aligned.sortedByCoord.out.bam", sample=samples), 
+             
+rule star_pe_multi: 
+        input: 
+                fq1 = "trimmed/{sample}_R1.fastq.gz",
+                fq2 = "trimmed/{sample}_R2.fastq.gz", 
+                index =  directory("Genome-index"), 
+        output: 
+                "STAR/{sample}/Aligned.sortedByCoord.out.bam" 
+        log: 
+                "logs/star/pe/{sample}.log" 
+        params: 
+                index = "/export/grellscheidfs/Madelen/Snakemake_dataset/Genome-index", 
+                extra = "--outSAMtype BAM SortedByCoordinate --twopassMode Basic --limitSjdbInsertNsj 1500000 --outSAMmultNmax 1 --quantMode TranscriptomeSAM GeneCounts --outFilterMatchNmin 95",  
+                prefix = "STAR/{sample}/",
+        threads: 
+                8
+        shell:
+                "STAR {params.extra} --runThreadN {threads} \
+                        --genomeDir {params.index} \
+                        --readFilesIn {input.fq1} {input.fq2} \
+                        --readFilesCommand zcat \
+                        --outFileNamePrefix {params.prefix}" 
+
+
